@@ -1,0 +1,197 @@
+<head>
+<meta charset="UTF-8">
+<title>B-ZONE Roata Câștigătorilor</title>
+<link rel="icon" type="image/png" href="logo.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+body {
+  font-family: 'Montserrat', sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #fff;
+  padding: 20px;
+}
+h1 {
+  font-size: 36px;
+  color: #f1c40f;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 8px rgba(0,0,0,0.5);
+  text-align: center;
+}
+#logoTop {
+  width: 80px;
+  margin-bottom: 15px;
+}
+#fileInput { margin-bottom: 15px; font-size: 16px; }
+#count { margin-bottom: 15px; font-size: 16px; color: #f1c40f; text-shadow: 1px 1px 4px rgba(0,0,0,0.5); }
+.num-winners-container { display: none; flex-direction: row; gap: 15px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; }
+.num-winners-container div { display: flex; flex-direction: column; gap: 4px; }
+.num-winners-container label { font-size: 14px; font-weight: 600; }
+.num-winners-container input { padding: 6px 8px; border-radius: 8px; border: none; font-size: 14px; min-width: 120px; }
+#wheelCanvas {
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.2);
+  cursor: pointer;
+  background: #111;
+}
+.spin {
+  padding: 14px 28px;
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
+  color: #222; font-weight: bold;
+  border: none; border-radius: 50px; cursor: pointer;
+  font-size: 18px; margin: 20px 0;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.spin:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.spin:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+.winner {
+  margin-top: 20px;
+  font-size: 18px; font-weight: 600;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  padding: 16px 20px;
+  border-radius: 14px;
+  display: none;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  text-align: left;
+  color: #fff;
+  animation: fadePop 0.8s ease-out;
+  border: 2px solid #fff;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-line;
+}
+@keyframes fadePop {
+  0% {opacity: 0; transform: scale(0.8);}
+  50% {opacity: 1; transform: scale(1.05);}
+  100% {opacity: 1; transform: scale(1);}
+}
+</style>
+</head>
+<body>
+
+<img id="logoTop" src="logo.png" alt="B-ZONE Logo">
+<h1>B-ZONE</h1>
+
+<input type="file" id="fileInput" accept=".txt,.csv">
+
+<div class="num-winners-container" id="numWinnersContainer">
+  <div>
+    <label for="numWinners">Câștigători:</label>
+    <input type="number" id="numWinners" min="1" value="1">
+  </div>
+  <div>
+    <label for="prizesInput">Premii:</label>
+    <input type="text" id="prizesInput" placeholder="Ex: Telefon, Tableta, Voucher">
+  </div>
+</div>
+
+<div id="count">0 participanți</div>
+<canvas id="wheelCanvas" width="400" height="400"></canvas>
+<button class="spin" id="spinBtn">SPIN</button>
+<div class="winner" id="winner"></div>
+
+<script>
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+const spinBtn = document.getElementById('spinBtn');
+const winnerBox = document.getElementById('winner');
+const fileInput = document.getElementById('fileInput');
+const count = document.getElementById('count');
+const numWinnersContainer = document.getElementById('numWinnersContainer');
+const numWinnersInput = document.getElementById('numWinners');
+const prizesInput = document.getElementById('prizesInput');
+
+let participants = [];
+let angle = 0;
+const wheelLogo = new Image();
+wheelLogo.src = "logo.png";
+
+function updateParticipantsFromText(text){
+  participants = text.split(/\r?\n/).map(n=>n.trim()).filter(n=>n.length>0);
+  count.textContent = participants.length+" participanți";
+}
+
+fileInput.addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    updateParticipantsFromText(ev.target.result);
+    fileInput.style.display="none";
+    numWinnersContainer.style.display="flex";
+    drawWheel();
+  }
+  reader.readAsText(file);
+});
+
+function drawWheel(){
+  const cx = canvas.width/2;
+  const cy = canvas.height/2;
+  const radius = canvas.width/2;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+ 
+  ctx.fillStyle = "#111";
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, 2*Math.PI);
+  ctx.fill();
+
+
+  if(wheelLogo.complete){
+    const logoSize = radius; 
+    ctx.drawImage(wheelLogo, cx - logoSize/2, cy - logoSize/2, logoSize, logoSize);
+  } else {
+    wheelLogo.onload = drawWheel;
+  }
+}
+
+function spinWheel(){
+  if(participants.length===0){ alert("Adaugă participanți mai întâi!"); return; }
+  spinBtn.disabled=true;
+  winnerBox.style.display="none";
+  let spins = 5 + Math.random()*5;
+  let currentAngle = angle;
+  const duration = 3000;
+  const start = performance.now();
+
+  function animate(time){
+    let t = (time-start)/duration;
+    if(t>1) t=1;
+    const easeOut = 1 - Math.pow(1-t,3);
+    const rotation = spins*2*Math.PI*easeOut;
+    angle = currentAngle + rotation;
+    canvas.style.transform = `rotate(${angle}rad)`;
+    if(t<1) requestAnimationFrame(animate);
+    else { spinBtn.disabled=false; showWinners(); }
+  }
+  requestAnimationFrame(animate);
+}
+
+function showWinners(){
+  let num = parseInt(numWinnersInput.value);
+  if(num>participants.length) num=participants.length;
+  if(num<1) num=1;
+  let temp=[...participants];
+  let winners=[];
+  for(let i=0;i<num;i++){
+    const idx=Math.floor(Math.random()*temp.length);
+    winners.push(temp.splice(idx,1)[0]);
+  }
+  let prizes = prizesInput.value.split(',').map(p=>p.trim());
+  let text="";
+  winners.forEach((w,i)=>{
+    let prizeText = prizes[i] ? " – Premiu: "+prizes[i] : "";
+    text+=`🎉 Câștigător: ${w}${prizeText}\n`;
+  });
+  winnerBox.textContent=text;
+  winnerBox.style.display="block";
+}
+
+spinBtn.addEventListener('click',spinWheel);
+</script>
+
+</body>
+</html>
